@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced Camera Capture</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
+    #camera {
+      margin-top: 20px;
+    }
+    #captureBtn, #uploadBtn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #capturedImage {
+      margin-top: 10px;
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <video id="camera" width="640" height="480" autoplay></video>
+  <br>
+  <button id="captureBtn">Capture Image</button>
+  <button id="uploadBtn" style="display:none;">Upload Image</button>
+  <br>
+  <img id="capturedImage" alt="Captured Image">
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const video = document.getElementById('camera');
+      const captureBtn = document.getElementById('captureBtn');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const capturedImage = document.getElementById('capturedImage');
+      let imageDataURL;
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((error) => {
+          console.error('Error accessing webcam:', error);
+        });
+
+      captureBtn.addEventListener('click', () => {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Access the captured image data
+        imageDataURL = canvas.toDataURL('image/png');
+
+        // Display the captured image
+        capturedImage.src = imageDataURL;
+
+        // Show upload button
+        uploadBtn.style.display = 'inline';
+      });
+
+      uploadBtn.addEventListener('click', () => {
+        uploadImageToAppSheet(imageDataURL);
+      });
+    });
+
+    function uploadImageToAppSheet(imageDataURL) {
+      const apiUrl = 'https://api.appsheet.com/api/v2/apps/{appId}/tables/{tableName}/Action';
+      const apiKey = 'YOUR_APPSHEET_API_KEY';
+
+      const payload = {
+        "Action": "Add",
+        "Properties": {
+          "Locale": "en-US"
+        },
+        "Rows": [
+          {
+            "ImageColumnName": imageDataURL
+            // Add other columns data as necessary
+          }
+        ]
+      };
+
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ApplicationAccessKey': apiKey
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Success:', data);
+        alert('Image uploaded successfully');
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        alert('Failed to upload image');
+      });
+    }
+  </script>
+</body>
+</html>
